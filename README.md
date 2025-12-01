@@ -78,6 +78,104 @@ All the logic lives in `app/page.jsx`:
 
 ---
 
+📡 API Attempts & Pivot Explanation (Solo Developer)
+Initial Plan: Use AI-generated drink recipes
+
+At the beginning of the project, I integrated the OpenAI API to automatically generate:
+
+Drink names
+
+Ingredient lists
+
+Step-by-step instructions
+
+Custom variations based on whatever ingredients the user selected
+
+My implementation used the OpenAI Responses API, with requests shaped like:
+
+const response = await client.responses.create({
+  model: "gpt-4.1-mini",
+  input: prompt
+});
+
+
+I also experimented with:
+
+OpenAI Image Generation API for drink photos
+
+Unsplash Source API for cocktail images
+(https://source.unsplash.com/...)
+
+Why I Pivoted Away From External APIs
+
+During development, I ran into multiple real-world issues:
+
+1. API quota limits
+
+My OpenAI account hit 429 “quota exceeded” errors quickly, even after a few test requests.
+This meant the app wouldn’t reliably run during my class presentation.
+
+2. Unreliable image loading
+
+Unsplash images didn’t always load because of:
+
+School network filtering
+
+Authentication/CORS quirks
+
+Hot reload inconsistencies
+
+This caused blank cards and broken image previews.
+
+3. Presentation stability
+
+Since this project is graded and demonstrated live, I wanted something:
+
+Free
+
+Offline-capable
+
+Guaranteed to work on any machine
+
+Not dependent on API key issues or network instability
+
+So I decided to remove external API calls entirely.
+
+Final Approach: Local, Self-Contained Drink Generator
+
+I rebuilt the drink generator to run 100% locally in page.jsx using JavaScript:
+
+The app analyzes the chosen alcohol, mixers, and fruit
+
+It selects from curated drink “templates” I wrote manually
+
+It generates a unique drink suggestion each time
+
+It creates a custom SVG “photo” on the fly, encoded as a data URL
+→ This guarantees the image loads instantly every time, even offline
+
+Benefits:
+
+No API keys
+
+No errors
+
+No cost
+
+No reliance on internet
+
+Perfect for consistent classroom demos
+
+💡 What I Learned
+
+Real development often requires adapting when APIs introduce cost or reliability issues.
+
+Simpler local logic can be more stable than AI-generated responses.
+
+Offline-capable apps are much easier to demo and distribute.
+
+The OpenAI version can still be added later — but I built a solid fallback first.
+
 ## Getting Started (for the grader)
 
 ```bash
