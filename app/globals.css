@@ -1,269 +1,77 @@
+/* ===== Global Reset ===== */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+/* ===== Colors ===== */
+:root {
+  --black: #0a0a0a;
+  --dark-gray: #1c1c1c;
+  --gold: #d4af37;
+  --gold-light: #f1d27b;
+  --white: #ffffff;
+}
+
+/* ===== Typography ===== */
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  background: #020617;
-  color: #e5e7eb;
+  background: var(--black);
+  color: var(--white);
+  font-family: "Cinzel", serif; /* luxury cocktail menu font */
+  padding: 20px;
 }
 
-.page {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 1.5rem 1rem 3rem;
-}
+/* Import the font */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
 
-.header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.header h1 {
-  margin: 0 0 0.25rem;
-  font-size: 2rem;
-}
-
-.tagline {
-  margin: 0;
-  color: #9ca3af;
-}
-
-.disclaimer {
-  font-size: 0.8rem;
-  color: #9ca3af;
-  margin-top: 0.5rem;
-}
-
-.drunk-toggle {
-  border-radius: 999px;
-  border: 1px solid #4b5563;
-  background: #0f172a;
-  color: #f9fafb;
-  padding: 0.4rem 0.9rem;
-  font-size: 0.9rem;
-  cursor: pointer;
-}
-
-.drunk-toggle.on {
-  background: #22c55e;
-  color: #022c22;
-}
-
-.section {
-  margin-top: 1.25rem;
-}
-
-.section-title {
-  margin: 0 0 0.5rem;
-  font-size: 1rem;
-}
-
-.section-title.drunk {
-  font-size: 1.2rem;
-}
-
-.pill-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.pill-row.drunk {
-  gap: 0.75rem;
-}
-
-.pill {
-  border-radius: 999px;
-  border: 1px solid #4b5563;
-  background: #020617;
-  color: #e5e7eb;
-  padding: 0.25rem 0.75rem;
-  font-size: 0.85rem;
-  cursor: pointer;
-}
-
-.pill-selected {
-  background: #22c55e;
-  color: #022c22;
-  border-color: #22c55e;
-}
-
-.actions {
-  margin-top: 1.5rem;
-  display: flex;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.primary-btn {
-  border: none;
-  border-radius: 999px;
-  background: #22c55e;
-  color: #022c22;
-  padding: 0.6rem 1.4rem;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.primary-btn.big {
-  font-size: 1.1rem;
-  padding: 1rem 2rem;
-  box-shadow: 0 0 15px rgba(34, 197, 94, 0.7);
-}
-
-.secondary-btn {
-  border-radius: 999px;
-  border: 1px solid #4b5563;
-  background: #020617;
-  color: #e5e7eb;
-  padding: 0.5rem 1.2rem;
-  cursor: pointer;
-}
-
-.result-area {
-  margin-top: 1.75rem;
-}
-
-.empty-state {
-  text-align: center;
-  color: #9ca3af;
-  font-style: italic;
-}
-
-.drink-card {
-  background: #020617;
-  border-radius: 0.75rem;
-  border: 1px solid #1f2937;
-  padding: 1.25rem;
-}
-
-.drink-image {
-  width: 100%;
-  max-height: 260px;
-  object-fit: cover;
-  border-radius: 0.9rem;
-  margin-bottom: 0.9rem;
-  border: 1px solid rgba(250, 204, 21, 0.4);
-  display: block;
-}
-
-
-.drink-description {
-  color: #d1d5db;
-}
-
-.drink-columns {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.25rem;
-  margin-top: 0.75rem;
-}
-
-.drink-columns h3 {
-  margin-top: 0;
-}
-
-.feedback-row {
-  margin-top: 1rem;
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.like-btn,
-.dislike-btn {
-  border-radius: 999px;
-  border: none;
-  padding: 0.45rem 1.2rem;
-  cursor: pointer;
-  font-weight: 500;
-}
-
-.like-btn {
-  background: #22c55e;
-  color: #022c22;
-}
-
-.dislike-btn {
-  background: #ef4444;
-  color: #fef2f2;
-}
-
-.next-btn {
-  border-radius: 999px;
-  border: 1px solid rgba(250, 204, 21, 0.7);
-  background: transparent;
-  color: #facc15;
-  padding: 0.45rem 1.3rem;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.85rem;
-}
-
-
-.feedback-stats {
-  margin-top: 0.5rem;
-  font-size: 0.85rem;
-  color: #9ca3af;
-}
-
-.footer {
-  margin-top: 2rem;
-  text-align: center;
-  font-size: 0.8rem;
-  color: #6b7280;
-}
-
-/* Drunk mode global tweaks */
-.page.drunk-mode {
-  font-size: 1.05rem;
-}
-
-.page.drunk-mode .section-title {
-  text-transform: uppercase;
-}
-
-.back-btn {
-  margin-bottom: 1rem;
-}
-
-/* EXTRA DRUNK MODE CHAOS */
-
-@keyframes drunk-wiggle {
-  0% { transform: rotate(-1deg) translateY(0); }
-  25% { transform: rotate(1deg) translateY(-2px); }
-  50% { transform: rotate(-1deg) translateY(1px); }
-  75% { transform: rotate(1deg) translateY(-1px); }
-  100% { transform: rotate(-1deg) translateY(0); }
-}
-
-.drunk-title {
-  font-size: 3rem;
-  font-weight: 900;
+/* ===== Links ===== */
+a {
   color: var(--gold);
-  text-shadow: 0 0 10px rgba(250, 204, 21, 0.7),
-               0 0 20px rgba(250, 204, 21, 0.4);
-  animation: drunk-wiggle 1.2s infinite ease-in-out;
+  text-decoration: none;
+}
+a:hover {
+  color: var(--gold-light);
 }
 
-.page.drunk-mode .section-title {
-  font-size: 1.3rem;
-  letter-spacing: 0.2em;
+/* ===== Buttons ===== */
+button {
+  background: var(--gold);
+  color: var(--black);
+  padding: 12px 22px;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 700;
+  transition: 0.2s ease-in-out;
+  font-family: inherit;
 }
 
-.page.drunk-mode .pill {
-  transform: scale(1.08);
-  font-size: 1.05rem;
+button:hover {
+  background: var(--gold-light);
 }
 
-.page.drunk-mode .primary-btn.big {
-  font-size: 1.4rem;
-  padding: 1.1rem 2.5rem;
+/* ===== Card Styling ===== */
+.card {
+  background: var(--dark-gray);
+  padding: 20px;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  box-shadow: 0px 0px 10px rgba(212, 175, 55, 0.2);
+  transition: 0.3s ease;
 }
 
-.page.drunk-mode .like-btn,
-.page.drunk-mode .dislike-btn,
-.page.drunk-mode .next-btn {
-  transform: scale(1.1);
+.card:hover {
+  transform: translateY(-4px);
 }
 
+/* ===== Headings ===== */
+h1, h2, h3 {
+  color: var(--gold);
+  margin-bottom: 12px;
+}
+
+p {
+  margin: 10px 0;
+  line-height: 1.7;
+}
