@@ -1,575 +1,455 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-const alcoholOptions = [
-  "Vodka",
-  "Rum",
-  "Gin",
-  "Tequila",
-  "Whiskey",
-  "Wine",
-  "Beer",
-];
+/*
+  - Uses /api/auth (signup/login from Part1)
+  - Uses /api/generateDrink to produce candidates
+  - Uses /api/user to fetch current user profile
+  - Uses /api/actions, /api/comments, /api/leaderboard (from Part1)
+  - Suggestion engine: fetches N candidates, infers tags, scores against user likes/dislikes
+  - Special narrator: generates script if not present, supports play/stop
+*/
 
-const mixerOptions = [
-  "Orange juice",
-  "Cranberry juice",
-  "Pineapple juice",
-  "Soda water",
-  "Cola",
-  "Tonic water",
-  "Lemonade",
-  "Milk / Cream",
-  "Lime juice",
-];
-
-const fruitOptions = [
-  "Lime",
-  "Lemon",
-  "Orange",
-  "Strawberries",
-  "Blueberries",
-  "Mint",
-  "No fruit",
-];
-
-// ---------- local drink generator (no API) ----------
-
-function createRandomDrink(alcohols = [], mixers = [], fruits = []) {
-  const lower = (arr) => arr.map((x) => x.toLowerCase());
-  const alc = lower(alcohols);
-  const mix = lower(mixers);
-  const fruit = lower(fruits);
-
-  const hasAlc = (name) => alc.includes(name.toLowerCase());
-  const hasMix = (name) => mix.includes(name.toLowerCase());
-  const hasFruit = (name) => fruit.includes(name.toLowerCase());
-
-  const ideas = [];
-  let isAlcoholic = alcohols.length > 0;
-
-  // Vodka + OJ
-  if (hasAlc("vodka") && hasMix("orange juice")) {
-    ideas.push(
-      {
-        name: "Lazy Screwdriver",
-        description: "Classic vodka and orange juice, easy and bright.",
-        ingredients: [
-          "2 oz vodka",
-          "4–6 oz orange juice",
-          hasFruit("orange") ? "Orange slice for garnish" : null,
-        ].filter(Boolean),
-        steps: [
-          "Fill a glass with ice.",
-          "Pour in the vodka.",
-          "Top with orange juice.",
-          "Stir and sip.",
-        ],
-      },
-      {
-        name: "Dorm Room Sunrise",
-        description: "A sweeter twist on a screwdriver for late nights.",
-        ingredients: [
-          "2 oz vodka",
-          "4–6 oz orange juice",
-          "Splash of red juice or soda (optional)",
-        ],
-        steps: [
-          "Add ice to a cup.",
-          "Dump in vodka.",
-          "Pour in orange juice almost to the top.",
-          "Drizzle a splash of red juice or soda on top.",
-        ],
-      }
-    );
+function tokenKey() {
+  return "wsid_token_v1";
+}
+function getToken() {
+  return typeof window !== "undefined" ? localStorage.getItem(tokenKey()) : null;
+}
+function setToken(t) {
+  if (typeof window === "undefined") return;
+  if (!t) localStorage.removeItem(tokenKey());
+  else localStorage.setItem(tokenKey(), t);
+}
+function mkClientId(drink) {
+  // deterministic-ish id from name+ingredients
+  const s = (drink.name || "") + "|" + ((drink.ingredients || []).join(",") || "");
+  try {
+    return "d_" + btoa(s).replace(/=/g, "").slice(0, 18);
+  } catch {
+    return "d_" + Math.random().toString(36).slice(2, 9);
   }
-
-  // Rum + Cola
-  if (hasAlc("rum") && hasMix("cola")) {
-    ideas.push(
-      {
-        name: "Dorm Room Rum and Coke",
-        description: "Zero effort, maximum nostalgia.",
-        ingredients: [
-          "2 oz rum",
-          "4–6 oz cola",
-          hasFruit("lime") ? "Lime wedge" : null,
-        ].filter(Boolean),
-        steps: [
-          "Fill a glass with ice.",
-          "Pour rum over the ice.",
-          "Top with cola.",
-          hasFruit("lime")
-            ? "Squeeze a lime wedge and drop it in."
-            : "Give it a quick stir.",
-        ],
-      },
-      {
-        name: "Midnight Cuba Libre",
-        description: "Rum and Coke with extra lime attitude.",
-        ingredients: [
-          "2 oz rum",
-          "4–6 oz cola",
-          hasFruit("lime") ? "Juice of 1 lime" : "Any citrus squeeze you have",
-        ].filter(Boolean),
-        steps: [
-          "Fill your cup with ice.",
-          "Pour in the rum.",
-          "Add citrus juice.",
-          "Top with cola and stir.",
-        ],
-      }
-    );
-  }
-
-  // Tequila + lime-ish
-  if (hasAlc("tequila") && (hasMix("lime juice") || hasFruit("lime"))) {
-    ideas.push(
-      {
-        name: "Barebones Tequila Sour",
-        description: "Like a stripped-down margarita using what you have.",
-        ingredients: [
-          "2 oz tequila",
-          hasMix("lime juice") ? "1 oz lime juice" : "Juice of 1 lime",
-          "0.5–1 oz simple syrup or sugar (if available)",
-        ],
-        steps: [
-          "Add tequila, lime, and sweetener to a jar with ice.",
-          "Shake or stir until cold.",
-          "Pour into a glass with fresh ice.",
-        ],
-      },
-      {
-        name: "Kitchen Counter Margarita",
-        description: "A rough-around-the-edges margarita that still hits.",
-        ingredients: [
-          "2 oz tequila",
-          hasMix("lime juice") ? "1 oz lime juice" : "Juice of 1–2 limes",
-          "Splash of any sweet soda or juice",
-        ],
-        steps: [
-          "Fill a glass with ice.",
-          "Add tequila and lime.",
-          "Top with sweet soda or juice.",
-          "Stir and taste.",
-        ],
-      }
-    );
-  }
-
-  // Mocktails (no alcohol)
-  if (!alcohols.length && mixers.length) {
-    const base = mixers[0];
-    isAlcoholic = false;
-    ideas.push(
-      {
-        name: "House Mocktail",
-        description: "Non-alcoholic but still cute and tasty.",
-        ingredients: [
-          base,
-          fruits.length ? fruits.join(", ") + " for garnish" : null,
-        ].filter(Boolean),
-        steps: [
-          "Add ice to a glass.",
-          "Pour in your base drink.",
-          fruits.length
-            ? "Use your fruit as garnish or squeeze it into the drink."
-            : "Stir and enjoy.",
-        ],
-      },
-      {
-        name: "Fizz-Free Zone",
-        description: "Simple, refreshing, and totally zero-proof.",
-        ingredients: [
-          base,
-          hasMix("soda water") ? "Splash of soda water" : null,
-        ].filter(Boolean),
-        steps: [
-          "Fill a glass with ice.",
-          "Pour your base drink in about three-quarters of the way.",
-          hasMix("soda water")
-            ? "Top with soda water and stir."
-            : "Stir once or twice and sip.",
-        ],
-      }
-    );
-  }
-
-  // Generic combo if nothing else matched
-  if (alcohols.length && mixers.length && !ideas.length) {
-    const a = alcohols[0];
-    const m = mixers[0];
-    ideas.push({
-      name: a + " " + m + " Highball",
-      description:
-        "A simple mix of " +
-        a.toLowerCase() +
-        " and " +
-        m.toLowerCase() +
-        ", built over ice.",
-      ingredients: [
-        "2 oz " + a.toLowerCase(),
-        "4–6 oz " + m.toLowerCase(),
-        fruits.length ? fruits[0] + " for garnish" : null,
-      ].filter(Boolean),
-      steps: [
-        "Fill a glass with ice.",
-        "Pour in the " + a.toLowerCase() + ".",
-        "Top with " + m.toLowerCase() + ".",
-        fruits.length
-          ? "Garnish with your " + fruits[0].toLowerCase() + "."
-          : "Give it a quick stir.",
-      ],
-    });
-  }
-
-  // Total fallback
-  if (!ideas.length) {
-    isAlcoholic = false;
-    ideas.push({
-      name: "Water or Juice Break",
-      description:
-        "Looks like you are low on ingredients. Hydrate and reset.",
-      ingredients: ["Whatever drink you have", "Ice, if you want"],
-      steps: [
-        "Pour your drink into a cup.",
-        "Add ice if you want it cold.",
-        "Take a breather and enjoy.",
-      ],
-    });
-  }
-
-  // Pick one at random
-  const index = Math.floor(Math.random() * ideas.length);
-  const baseDrink = ideas[index];
-
-  // Inline SVG image (always works, no network)
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450">
-    <defs>
-      <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-        <stop offset="0%" stop-color="#020617"/>
-        <stop offset="50%" stop-color="#111827"/>
-        <stop offset="100%" stop-color="#78350f"/>
-      </linearGradient>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#bg)" />
-    <text x="50%" y="40%" fill="#facc15" font-size="38" text-anchor="middle" font-family="system-ui" font-weight="700">
-      ${baseDrink.name}
-    </text>
-    <text x="50%" y="60%" fill="#e5e7eb" font-size="20" text-anchor="middle" font-family="system-ui">
-      What Should I Drink App
-    </text>
-  </svg>`;
-
-  const imageUrl = `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-
-  return { ...baseDrink, imageUrl, isAlcoholic };
 }
 
-// ---------- pill multi-select component ----------
+/* Quick tag inference from ingredient strings */
+function inferTagsFromIngredients(ingredients = []) {
+  const out = new Set();
+  const text = ingredients.join(" ").toLowerCase();
+  const keywords = [
+    "vodka", "rum", "gin", "tequila", "whiskey", "whisky", "wine", "beer",
+    "cola", "tonic", "soda", "juice", "orange", "lime", "lemon", "mint",
+    "straw", "strawberry", "blueberry", "milk", "cream", "pineapple", "cranberry",
+    "sweet", "sour", "bitter", "spicy", "ginger", "honey", "simple syrup"
+  ];
+  keywords.forEach(k => { if (text.includes(k)) out.add(k.replace(/\s+/g, "-")); });
+  // if any words say "ice", mark cold
+  if (text.includes("ice")) out.add("cold");
+  return Array.from(out);
+}
 
-function MultiSelect({ label, options, selected, onChange, drunkMode }) {
-  const toggle = (item) => {
-    if (selected.includes(item)) {
-      onChange(selected.filter((x) => x !== item));
-    } else {
-      onChange([...selected, item]);
+/* Score candidate drink for user */
+function scoreDrinkForUser(drink, user) {
+  if (!user) return 0;
+  const tags = (drink.tags || inferTagsFromIngredients(drink.ingredients || []));
+  let score = 0;
+  tags.forEach(t => {
+    if ((user.likes || []).includes(t)) score += 5;
+    if ((user.dislikes || []).includes(t)) score -= 6;
+  });
+  // slight bonus for drinks that have been popular in the leaderboard meta
+  if (drink.meta && drink.meta.popularity) score += Math.log(1 + drink.meta.popularity) * 0.7;
+  // small random jitter so ties vary
+  score += Math.random() * 0.3;
+  return score;
+}
+
+/* speech helpers */
+function speakText(text) {
+  if (!("speechSynthesis" in window)) return { ok: false, error: "no speech" };
+  window.speechSynthesis.cancel();
+  const ut = new SpeechSynthesisUtterance(text);
+  ut.rate = 0.95;
+  try {
+    const voices = window.speechSynthesis.getVoices();
+    if (voices && voices.length) ut.voice = voices.find(v => v.lang.startsWith("en")) || voices[0];
+  } catch {}
+  window.speechSynthesis.speak(ut);
+  return { ok: true };
+}
+function stopSpeech() {
+  if (!("speechSynthesis" in window)) return;
+  window.speechSynthesis.cancel();
+}
+
+/* small helper to call server endpoints */
+async function apiPost(url, body) {
+  const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw j;
+  return j;
+}
+
+export default function HomePage() {
+  const [user, setUser] = useState(null);
+  const [usernameIn, setUsernameIn] = useState("");
+  const [passwordIn, setPasswordIn] = useState("");
+  const [drink, setDrink] = useState(null);
+  const [view, setView] = useState("input"); // input | result | suggestions | leaderboard
+  const [candidates, setCandidates] = useState([]);
+  const [isGen, setIsGen] = useState(false);
+  const [specialPlaying, setSpecialPlaying] = useState(false);
+  const [comments, setComments] = useState([]);
+  const [leaderboard, setLeaderboard] = useState({ drinkStats: {}, streaks: [] });
+
+  useEffect(() => {
+    // hydrate token -> get user
+    const t = getToken();
+    if (t) {
+      fetch("/api/user", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token: t }) })
+        .then(r => r.json())
+        .then(j => { if (j?.ok) setUser({ username: j.user.username, ...j.user, token: t }); else setToken(null); })
+        .catch(() => setToken(null));
     }
-  };
+    refreshComments();
+    refreshLeaderboard();
+  }, []);
+
+  async function refreshComments() {
+    try {
+      const res = await fetch("/api/comments");
+      const j = await res.json();
+      setComments(j.comments || []);
+    } catch (e) { console.warn(e); }
+  }
+  async function refreshLeaderboard() {
+    try {
+      const res = await fetch("/api/leaderboard");
+      const j = await res.json();
+      setLeaderboard(j || {});
+    } catch (e) { console.warn(e); }
+  }
+
+  async function doRegister() {
+    try {
+      const j = await apiPost("/api/auth", { action: "signup", username: usernameIn, password: passwordIn });
+      alert("registered (demo). Please log in.");
+      setUsernameIn(""); setPasswordIn("");
+    } catch (e) {
+      alert(e?.error || "register failed");
+    }
+  }
+  async function doLogin() {
+    try {
+      const j = await apiPost("/api/auth", { action: "login", username: usernameIn, password: passwordIn });
+      // server's login returned success; we create a simple token here (mirror earlier token scheme)
+      const token = btoa(usernameIn + "|" + Date.now());
+      setToken(token);
+      // fetch profile
+      const uj = await apiPost("/api/user", { token });
+      setUser({ username: usernameIn, token, ...uj.user });
+      setUsernameIn(""); setPasswordIn("");
+      alert("logged in (demo)");
+    } catch (e) {
+      alert(e?.error || "login failed");
+    }
+  }
+  function doLogout() {
+    setToken(null);
+    setUser(null);
+  }
+
+  /* Generate a single drink using existing endpoint */
+  async function fetchOneDrink() {
+    const res = await fetch("/api/generateDrink", { method: "POST" });
+    const j = await res.json().catch(() => ({}));
+    const d = j.drink || null;
+    if (!d) return null;
+    // attach deterministic id and inferred tags
+    d._id = mkClientId(d);
+    d.tags = d.tags || inferTagsFromIngredients(d.ingredients || []);
+    return d;
+  }
+
+  /* Suggestion engine on client:
+     - fetch N candidate drinks (calls generateDrink N times),
+     - attach tags if missing,
+     - score for user via likes/dislikes,
+     - return sorted top list
+  */
+  async function getSuggestions({ tries = 5 } = {}) {
+    setCandidates([]);
+    setIsGen(true);
+    const token = user?.token || getToken();
+    const fetched = [];
+    try {
+      for (let i = 0; i < tries; i++) {
+        // small delay to give generateDrink some variety if it randomized
+        const d = await fetchOneDrink();
+        if (d) fetched.push(d);
+      }
+      // optionally: augment with leaderboard-known drinks to increase variety
+      try {
+        const lbRes = await fetch("/api/leaderboard");
+        const lbJson = await lbRes.json();
+        const known = lbJson?.drinkStats ? Object.values(lbJson.drinkStats).slice(0, 3).map(m => ({ ...m.meta, _id: mkClientId(m.meta || {}), tags: m.meta?.tags || inferTagsFromIngredients((m.meta?.ingredients||[])) })) : [];
+        known.forEach(k => { if (k && !fetched.find(x => x._id === k._id)) fetched.push(k); });
+      } catch (e) { /* ignore leaderboard augment */ }
+
+      // score
+      const scored = fetched.map(d => ({ drink: d, score: scoreDrinkForUser(d, user) }));
+      scored.sort((a, b) => b.score - a.score);
+      setCandidates(scored.map(s => s.drink));
+      setView("suggestions");
+    } catch (e) {
+      console.error(e);
+      alert("failed to generate suggestions");
+    } finally {
+      setIsGen(false);
+    }
+  }
+
+  /* Play special narration for a drink:
+    - prefer drink.script if present
+    - else build a short script from name + ingredients + steps
+  */
+  function playNarratorFor(drinkObj) {
+    if (!drinkObj) return;
+    const script = drinkObj.script || `${drinkObj.name}. ${drinkObj.description || ""}. Ingredients: ${(drinkObj.ingredients || []).join(", ")}. Steps: ${(drinkObj.steps || []).slice(0,3).join(" — ")}. Cheers.`;
+    try {
+      speakText(script);
+      setSpecialPlaying(true);
+      // listen for end — set flag when done (SpeechSynthesis does not always reliably fire end event cross-browser, but we attach)
+      const onEnd = () => setSpecialPlaying(false);
+      window.speechSynthesis.onend = onEnd;
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+  function stopNarrator() {
+    stopSpeech();
+    setSpecialPlaying(false);
+  }
+
+  /* convenience wrapper for actions (like/dislike/drank) */
+  async function doAction(actionName, drinkObj) {
+    if (!user) { alert("login to interact"); return; }
+    try {
+      const body = { action: actionName, drinkId: drinkObj._id, drinkMeta: { name: drinkObj.name, ingredients: drinkObj.ingredients || [], tags: drinkObj.tags || [], description: drinkObj.description }, token: user.token };
+      const res = await apiPost("/api/actions", body);
+      // refresh leaderboard
+      await refreshLeaderboard();
+      return res;
+    } catch (e) {
+      alert(e?.error || "action failed");
+    }
+  }
+
+  async function postCommentFor(drinkObj, text) {
+    if (!user) { alert("login to comment"); return; }
+    try {
+      await apiPost("/api/comments", { drinkId: drinkObj._id, text, token: user.token });
+      await refreshComments(); // get fresh comments
+    } catch (e) {
+      alert(e?.error || "comment failed");
+    }
+  }
+
+  const commentsFor = useMemo(() => (comments || []).filter(c => drink && c.drinkId === drink._id), [comments, drink]);
 
   return (
-    <div className="section">
-      <h2 className={drunkMode ? "section-title drunk" : "section-title"}>
-        {label}
-      </h2>
-      <div className={drunkMode ? "pill-row drunk" : "pill-row"}>
-        {options.map((opt) => (
-          <button
-            key={opt}
-            type="button"
-            className={selected.includes(opt) ? "pill pill-selected" : "pill"}
-            onClick={() => toggle(opt)}
-          >
-            {opt}
-          </button>
-        ))}
-      </div>
+    <div style={{ padding: 20, color: "#eee", fontFamily: "Inter, sans-serif" }}>
+      <header style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <h1 style={{ margin: 0 }}>What Should I Drink?</h1>
+        <div style={{ marginLeft: "auto", display: "flex", gap: 8, alignItems: "center" }}>
+          {user ? (
+            <>
+              <div>Signed in as <strong>{user.username}</strong></div>
+              <button onClick={() => { doLogout(); }}>Logout</button>
+              <button onClick={() => { refreshLeaderboard(); setView("leaderboard"); }}>Leaderboard</button>
+            </>
+          ) : (
+            <>
+              <input placeholder="username" value={usernameIn} onChange={(e) => setUsernameIn(e.target.value)} />
+              <input placeholder="password" value={passwordIn} onChange={(e) => setPasswordIn(e.target.value)} type="password" />
+              <button onClick={doLogin}>Login</button>
+              <button onClick={doRegister}>Register</button>
+            </>
+          )}
+        </div>
+      </header>
+
+      <main style={{ display: "flex", gap: 20, marginTop: 18 }}>
+        <aside style={{ width: 340 }}>
+          <div style={{ border: "1px solid #222", padding: 12, borderRadius: 8 }}>
+            <p>Quick actions</p>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button onClick={async () => { setDrink(null); const d = await fetchOneDrink(); if (d) { setDrink(d); setView("result"); } }}>Surprise me</button>
+              <button onClick={() => getSuggestions({ tries: 6 })} disabled={isGen}>{isGen ? "Thinking..." : "Get Suggestions"}</button>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <label style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="checkbox" checked={specialPlaying} readOnly /> Narrator playing
+              </label>
+              <div style={{ marginTop: 8 }}>
+                <small style={{ color: "#aaa" }}>Tip: register & login so suggestions tune to your likes/dislikes.</small>
+              </div>
+            </div>
+
+            <div style={{ marginTop: 12 }}>
+              <button onClick={() => { setView("input"); }}>Home</button>
+              <button onClick={() => { setView("suggestions"); }}>Suggestions</button>
+              <button onClick={() => { setView("leaderboard"); refreshLeaderboard(); }}>Leaderboard</button>
+            </div>
+          </div>
+        </aside>
+
+        <section style={{ flex: 1 }}>
+          {view === "leaderboard" ? (
+            <div>
+              <h2>Leaderboard</h2>
+              <div style={{ display: "flex", gap: 12 }}>
+                <div style={{ flex: 1 }}>
+                  <h3>Drinks</h3>
+                  <div style={{ border: "1px solid #222", borderRadius: 8 }}>
+                    {Object.keys(leaderboard.drinkStats || {}).length === 0 && <div style={{ padding: 12 }}>No drink stats yet</div>}
+                    {Object.entries(leaderboard.drinkStats || {}).map(([id, s]) => (
+                      <div key={id} style={{ padding: 10, borderBottom: "1px solid #111" }}>
+                        <div style={{ fontWeight: 700 }}>{(s.meta && s.meta.name) || id}</div>
+                        <div style={{ color: "#aaa" }}>Likes: {s.likes||0} • Dislikes: {s.dislikes||0} • Drank: {s.drank||s.drank===0? s.drank: (s.drank||0)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div style={{ width: 220 }}>
+                  <h3>Top streaks</h3>
+                  <div style={{ border: "1px solid #222", borderRadius: 8 }}>
+                    {(leaderboard.streaks || []).length === 0 && <div style={{ padding: 8 }}>No streaks yet</div>}
+                    {(leaderboard.streaks || []).slice(0,10).map((s,i) => (
+                      <div key={i} style={{ padding: 8, borderBottom: "1px solid #111" }}>
+                        <div style={{ fontWeight: 700 }}>{s.username}</div>
+                        <div style={{ color: "#aaa" }}>{s.streak} days</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          ) : view === "result" ? (
+            <div>
+              {!drink ? <div>No drink yet — click Surprise me.</div> : (
+                <div style={{ display: "flex", gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <h2>{drink.name}</h2>
+                    <div style={{ color: "#ddd" }}>{drink.description}</div>
+
+                    <h4>Ingredients</h4>
+                    <ul>{(drink.ingredients || []).map((i, idx) => <li key={idx}>{i}</li>)}</ul>
+
+                    <h4>Steps</h4>
+                    <ol>{(drink.steps || []).map((s, idx) => <li key={idx}>{s}</li>)}</ol>
+
+                    <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                      <button onClick={() => doAction("like", drink)}>Like</button>
+                      <button onClick={() => doAction("dislike", drink)}>Dislike</button>
+                      <button onClick={() => doAction("drank", drink)}>I drank this</button>
+                      <button onClick={() => { const d = fetchOneDrink().then(x => { if (x) { setDrink(x); if (specialPlaying) playNarratorFor(x); } }); }}>Next →</button>
+                    </div>
+
+                    <div style={{ marginTop: 10 }}>
+                      <h4>Comments</h4>
+                      <CommentsArea initialComments={commentsFor} onPost={(t) => postCommentFor(drink, t)} currentUser={user} />
+                    </div>
+                  </div>
+
+                  <aside style={{ width: 320 }}>
+                    <img src={drink.imageUrl} alt={drink.name} style={{ width: "100%", borderRadius: 8 }} />
+                    <div style={{ marginTop: 8, color: "#aaa" }}>Tags: {(drink.tags || []).join(", ")}</div>
+
+                    <div style={{ marginTop: 12 }}>
+                      <button onClick={() => playNarratorFor(drink)} disabled={specialPlaying}>Play Narrator</button>
+                      <button onClick={() => stopNarrator()}>Stop</button>
+                    </div>
+                  </aside>
+                </div>
+              )}
+            </div>
+          ) : view === "suggestions" ? (
+            <div>
+              <h2>Suggestions</h2>
+
+              {candidates.length === 0 ? (
+                <div style={{ padding: 12 }}>
+                  <div>No suggestions yet. Click <strong>Get Suggestions</strong> to generate recommendations.</div>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(260px,1fr))", gap: 12 }}>
+                  {candidates.map((c, i) => (
+                    <div key={c._id || i} style={{ border: "1px solid #222", padding: 12, borderRadius: 8 }}>
+                      <div style={{ display: "flex", gap: 12 }}>
+                        <img src={c.imageUrl} alt={c.name} style={{ width: 80, height: 60, objectFit: "cover", borderRadius: 6 }} />
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontWeight: 700 }}>{c.name}</div>
+                          <div style={{ color: "#aaa", fontSize: 13 }}>{(c.tags || []).join(", ")}</div>
+                        </div>
+                      </div>
+                      <div style={{ marginTop: 8 }}>
+                        <button onClick={() => { setDrink(c); setView("result"); if (specialPlaying) playNarratorFor(c); }}>Open</button>
+                        <button onClick={() => doAction("like", c)}>Like</button>
+                        <button onClick={() => doAction("dislike", c)}>Dislike</button>
+                        <button onClick={() => doAction("drank", c)}>I drank</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+            </div>
+          ) : (
+            <div>
+              <p>Welcome — try “Surprise me” or get suggestions to find drinks that match your tastes.</p>
+            </div>
+          )}
+        </section>
+      </main>
+
+      <footer style={{ marginTop: 20, color: "#777" }}>
+        Demo persistence: server JSON files. For production, use DB + proper auth.
+      </footer>
     </div>
   );
 }
 
-// ---------- main page ----------
+/* CommentsArea component (small) */
+function CommentsArea({ initialComments = [], onPost, currentUser }) {
+  const [text, setText] = useState("");
+  const [localComments, setLocalComments] = useState(initialComments || []);
+  useEffect(() => setLocalComments(initialComments || []), [initialComments]);
 
-export default function HomePage() {
-  const [drunkMode, setDrunkMode] = useState(false);
-  const [alcohols, setAlcohols] = useState([]);
-  const [mixers, setMixers] = useState([]);
-  const [fruits, setFruits] = useState([]);
-
-  const [view, setView] = useState("input");
-  const [drink, setDrink] = useState(null);
-  const [likes, setLikes] = useState(0);
-  const [dislikes, setDislikes] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-
-  const handleGenerate = () => {
-    setView("result");
-    setIsLoading(true);
-    setDrink(null);
-
-    setTimeout(() => {
-      const d = createRandomDrink(alcohols, mixers, fruits);
-      setDrink(d);
-      setIsLoading(false);
-    }, 400);
-  };
-
-  const handleNextDrink = () => {
-    setIsLoading(true);
-    setTimeout(() => {
-      const d = createRandomDrink(alcohols, mixers, fruits);
-      setDrink(d);
-      setIsLoading(false);
-    }, 300);
-  };
-
-  const handleLike = () => {
-    if (!drink) return;
-    setLikes((prev) => prev + 1);
-  };
-
-  const handleDislike = () => {
-    if (!drink) return;
-    setDislikes((prev) => prev + 1);
-  };
-
-  const handleReset = () => {
-    setAlcohols([]);
-    setMixers([]);
-    setFruits([]);
-    setDrink(null);
-    setLikes(0);
-    setDislikes(0);
-    setView("input");
-  };
-
-  const handleBackToInput = () => {
-    setView("input");
-  };
+  async function doPost() {
+    if (!text.trim()) return;
+    await onPost(text);
+    setText("");
+    // refresh handled by parent; optimistic append:
+    setLocalComments(prev => [...prev, { username: currentUser?.username || "guest", text, ts: new Date().toISOString() }]);
+  }
 
   return (
-    <div className={drunkMode ? "page drunk-mode" : "page"}>
-      <header className="header">
-        <div>
-          <h1 className={drunkMode ? "drunk-title" : ""}>
-            {drunkMode ? "WHAT SHOULD I DRINK 😵‍💫🍺" : "What Should I Drink?"}
-          </h1>
-          <p className="tagline">
-            {drunkMode
-              ? "Tap stuff you see. I'll make you a drink idea. 🍹"
-              : "Tap in what you've got. I'll invent a drink idea for you. 🍸"}
-          </p>
+    <div>
+      {localComments.length === 0 && <div style={{ color: "#888" }}>No comments yet.</div>}
+      {localComments.map((c, i) => (
+        <div key={i} style={{ padding: 8, borderBottom: "1px solid #111" }}>
+          <div style={{ fontWeight: 700 }}>{c.username} <span style={{ color: "#666", fontSize: 12 }}>• {new Date(c.ts).toLocaleString()}</span></div>
+          <div style={{ marginTop: 4 }}>{c.text}</div>
         </div>
-        <button
-          type="button"
-          className={drunkMode ? "drunk-toggle on" : "drunk-toggle"}
-          onClick={() => setDrunkMode((prev) => !prev)}
-        >
-          {drunkMode ? "🍹 Drunk Mode: ON" : "🥂 Drunk Mode"}
-        </button>
-      </header>
-
-      <p className="disclaimer">
-        Please drink responsibly and only if you are of legal drinking age.
-      </p>
-
-      {view === "input" && (
-        <>
-          <MultiSelect
-            label="1. What alcohol do you have?"
-            options={alcoholOptions}
-            selected={alcohols}
-            onChange={setAlcohols}
-            drunkMode={drunkMode}
-          />
-
-          <MultiSelect
-            label="2. What mixers / other drinks do you have?"
-            options={mixerOptions}
-            selected={mixers}
-            onChange={setMixers}
-            drunkMode={drunkMode}
-          />
-
-          <MultiSelect
-            label="3. Any fruit or garnish?"
-            options={fruitOptions}
-            selected={fruits}
-            onChange={setFruits}
-            drunkMode={drunkMode}
-          />
-
-          <div className="actions">
-            <button
-              type="button"
-              className={drunkMode ? "primary-btn big" : "primary-btn"}
-              onClick={handleGenerate}
-              disabled={isLoading}
-            >
-              {isLoading
-                ? drunkMode
-                  ? "HOLD ONNN I'M THINKING 🧠🍹"
-                  : "Mixing an idea..."
-                : drunkMode
-                ? "HIT THE BIG GOLD BUTTON 👉🍹"
-                : "Show me a drink"}
-            </button>
-            <button
-              type="button"
-              className="secondary-btn"
-              onClick={handleReset}
-              disabled={isLoading}
-            >
-              Reset
-            </button>
-          </div>
-        </>
-      )}
-
-      {view === "result" && (
-        <main className="result-area">
-          <button
-            type="button"
-            className="secondary-btn back-btn"
-            onClick={handleBackToInput}
-            disabled={isLoading}
-          >
-            {drunkMode ? "← FIX MY STUFF" : "← Edit my ingredients"}
-          </button>
-
-          {isLoading && (
-            <p className="loading-text">
-              Shaking up something based on your ingredients...
-            </p>
-          )}
-
-          {drink && !isLoading && (
-            <div className="drink-card">
-              <img
-                src={drink.imageUrl}
-                alt={drink.name}
-                className="drink-image"
-              />
-              <h2>{drink.name}</h2>
-              <p className="drink-description">{drink.description}</p>
-
-              <div className="drink-columns">
-                <div>
-                  <h3>Ingredients</h3>
-                  <ul>
-                    {drink.ingredients.map((item, idx) => (
-                      <li key={idx}>
-                        {drunkMode
-                          ? item.replace("oz", " oz").toUpperCase()
-                          : item}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div>
-                  <h3>Steps</h3>
-                  <ol>
-                    {drink.steps.map((step, idx) => (
-                      <li key={idx}>
-                        {drunkMode
-                          ? step
-                              .replace(
-                                "Fill a glass with ice.",
-                                "Put ice in cup. 🧊"
-                              )
-                              .replace(
-                                "Fill a glass with ice",
-                                "Put ice in cup. 🧊"
-                              )
-                              .replace(
-                                "Add ice to a glass.",
-                                "Put ice in cup. 🧊"
-                              )
-                              .replace("Pour in", "Dump in")
-                              .replace("Pour your", "Dump your")
-                              .replace("Top with", "Throw on top")
-                              .replace(
-                                "Give it a quick stir",
-                                "Stir it a few times, it's fine."
-                              )
-                              .replace(
-                                "Give it a gentle stir",
-                                "Stir it a few times, it's fine."
-                              )
-                              .replace(
-                                "Shake or stir until it feels very cold.",
-                                "Shake it like a maraca. 🎶"
-                              )
-                              .replace(
-                                "Stir and enjoy.",
-                                "Stir and drink it, champ. 🥂"
-                              )
-                          : step}
-                      </li>
-                    ))}
-                  </ol>
-                </div>
-              </div>
-
-              <div className="feedback-row">
-                <button
-                  type="button"
-                  className="like-btn"
-                  onClick={handleLike}
-                  disabled={isLoading}
-                >
-                  👍 Like
-                </button>
-
-                <button
-                  type="button"
-                  className="dislike-btn"
-                  onClick={handleDislike}
-                  disabled={isLoading}
-                >
-                  👎 Dislike
-                </button>
-
-                <button
-                  type="button"
-                  className="next-btn"
-                  onClick={handleNextDrink}
-                  disabled={isLoading}
-                >
-                  {drunkMode ? "ANOTHER ONE 🔁" : "Next drink →"}
-                </button>
-              </div>
-
-              <p className="feedback-stats">
-                Likes this session: {likes} | Dislikes this session: {dislikes}
-              </p>
-            </div>
-          )}
-
-          {!drink && !isLoading && (
-            <p className="empty-state">
-              Pick what you have on the previous screen, then hit{" "}
-              <strong>Show me a drink</strong>.
-            </p>
-          )}
-        </main>
-      )}
-
-      <footer className="footer">
-        <p>Built with Next.js • What Should I Drink group project</p>
-      </footer>
+      ))}
+      <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+        <input placeholder={currentUser ? "Write a comment..." : "Login to comment"} value={text} onChange={(e) => setText(e.target.value)} style={{ flex: 1 }} />
+        <button onClick={doPost}>Post</button>
+      </div>
     </div>
   );
 }
