@@ -1,77 +1,148 @@
-/* ===== Global Reset ===== */
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
+/* app/globals.css */
+/* Reset + Black & Gold luxury theme */
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Inter:wght@300;400;600;700&display=swap');
 
-/* ===== Colors ===== */
-:root {
-  --black: #0a0a0a;
-  --dark-gray: #1c1c1c;
+:root{
+  --bg: #070707;
+  --panel: #0f0f0f;
+  --muted: #a8a8a8;
   --gold: #d4af37;
-  --gold-light: #f1d27b;
-  --white: #ffffff;
+  --gold-2: #f1d27b;
+  --accent: rgba(212,175,55,0.12);
+  --glass: rgba(255,255,255,0.03);
+  --card-border: rgba(212,175,55,0.18);
 }
 
-/* ===== Typography ===== */
-body {
-  background: var(--black);
-  color: var(--white);
-  font-family: "Cinzel", serif; /* luxury cocktail menu font */
-  padding: 20px;
+*{box-sizing:border-box;margin:0;padding:0}
+html,body,#root {height:100%}
+body{
+  background: linear-gradient(180deg, var(--bg) 0%, #060606 100%);
+  color: #eee;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  padding: 24px;
+  line-height:1.5;
 }
 
-/* Import the font */
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&display=swap');
+/* Luxury headings */
+.h1, h1 { font-family: 'Cinzel', serif; color: var(--gold); font-size: 28px; letter-spacing: 1px; }
+h2 { font-family: 'Cinzel', serif; color: var(--gold); margin-bottom:8px; font-size:20px; }
+h3 { color: var(--gold-2); font-size:16px; margin-bottom:6px; }
 
-/* ===== Links ===== */
-a {
-  color: var(--gold);
-  text-decoration: none;
-}
-a:hover {
-  color: var(--gold-light);
-}
-
-/* ===== Buttons ===== */
-button {
-  background: var(--gold);
-  color: var(--black);
-  padding: 12px 22px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-  transition: 0.2s ease-in-out;
-  font-family: inherit;
+/* containers */
+.container {
+  max-width:1200px;
+  margin: 0 auto;
 }
 
-button:hover {
-  background: var(--gold-light);
-}
-
-/* ===== Card Styling ===== */
+/* Card */
 .card {
-  background: var(--dark-gray);
-  padding: 20px;
-  border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.3);
-  box-shadow: 0px 0px 10px rgba(212, 175, 55, 0.2);
-  transition: 0.3s ease;
+  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+  border: 1px solid var(--card-border);
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.6), 0 1px 0px rgba(212,175,55,0.03) inset;
+  transition: transform .18s ease, box-shadow .18s ease;
+}
+.card:hover{ transform: translateY(-6px); box-shadow: 0 18px 40px rgba(0,0,0,0.8); }
+
+/* Panels & sidebars */
+.sidebar {
+  width:320px;
+}
+.main {
+  flex:1;
 }
 
-.card:hover {
-  transform: translateY(-4px);
+/* Buttons */
+.btn {
+  background: linear-gradient(180deg, var(--gold), var(--gold-2));
+  color: #070707;
+  border: none;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform .12s ease, opacity .12s;
+}
+.btn:hover { transform: translateY(-2px); opacity:0.98; }
+
+/* Ghost button */
+.btn-ghost {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.06);
+  color: var(--gold-2);
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
 }
 
-/* ===== Headings ===== */
-h1, h2, h3 {
-  color: var(--gold);
-  margin-bottom: 12px;
+/* Input */
+.input {
+  width:100%;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.02);
+  border: 1px solid rgba(255,255,255,0.04);
+  color: #eee;
+  outline: none;
+  margin-bottom:8px;
+}
+.input::placeholder { color: #777; }
+
+/* layout */
+.topbar {
+  display:flex;
+  align-items:center;
+  gap:16px;
+  margin-bottom:18px;
+}
+.nav-actions { margin-left:auto; display:flex; gap:8px; align-items:center; }
+
+.grid { display:flex; gap:20px; align-items:flex-start; }
+.left-col { width: 340px; }
+.right-col { flex:1; }
+
+/* Drink card specifics */
+.drink-image {
+  width:100%;
+  height:220px;
+  object-fit:cover;
+  border-radius:10px;
+  border: 1px solid rgba(255,255,255,0.02);
+  margin-bottom:12px;
 }
 
-p {
-  margin: 10px 0;
-  line-height: 1.7;
+/* tag pill */
+.pill {
+  display:inline-block;
+  padding:6px 10px;
+  border-radius:999px;
+  background: rgba(212,175,55,0.08);
+  color: var(--gold-2);
+  font-weight:600;
+  margin-right:8px;
+  font-size:13px;
 }
+
+/* small metadata */
+.meta { color: var(--muted); font-size:13px; }
+
+/* comments */
+.comments { margin-top:12px; }
+.comment { border-top: 1px solid rgba(255,255,255,0.02); padding:10px 0; }
+.comment-author { font-weight:700; color:var(--gold-2) }
+
+/* responsive */
+@media (max-width: 880px) {
+  .grid { flex-direction: column; }
+  .sidebar { width:100%; }
+  .drink-image { height:180px; }
+}
+
+/* small helper */
+.row { display:flex; gap:8px; align-items:center; }
+.small { font-size:13px; color:var(--muted); }
+.divider { height:2px; background: linear-gradient(90deg, transparent, var(--gold), transparent); margin:14px 0; border-radius:6px; }
+.center { text-align:center; }
