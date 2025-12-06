@@ -12,20 +12,33 @@ export default function DrinkPage() {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Load user + drink info
+  // --------------------------------------------------------------------
+  // Load user + drink data
+  // --------------------------------------------------------------------
   useEffect(() => {
     async function load() {
       try {
+        // Load user
         const u = await fetch("/api/auth/me", { credentials: "include" });
         const uj = await u.json();
         setUser(uj.user || null);
 
+        // Load drink
         const r = await fetch(`/api/drinks/${id}`);
         const j = await r.json();
 
-        if (r.ok) {
+        if (r.ok && j?.drink) {
           setDrink(j.drink);
-          loadComments(j.drink.id);
+
+          // Only load comments if drink.id exists
+          if (j.drink.id) {
+            loadComments(j.drink.id);
+          } else {
+            console.warn("Drink missing id:", j.drink);
+          }
+        } else {
+          console.warn("Drink not found:", j);
+          setDrink(null);
         }
       } catch (e) {
         console.error("LOAD ERROR:", e);
@@ -33,18 +46,28 @@ export default function DrinkPage() {
         setLoading(false);
       }
     }
+
     load();
   }, [id]);
 
+  // --------------------------------------------------------------------
+  // Load comments
+  // --------------------------------------------------------------------
   async function loadComments(drinkId) {
+    if (!drinkId) return; // Prevents undefined errors
+
     try {
       const res = await fetch(`/api/comments?drinkId=${drinkId}`);
       const j = await res.json();
       if (res.ok) setComments(j.comments || []);
-    } catch {}
+    } catch (e) {
+      console.error("COMMENTS ERROR:", e);
+    }
   }
 
-  // LIKE / DISLIKE
+  // --------------------------------------------------------------------
+  // Likes / Dislikes
+  // --------------------------------------------------------------------
   async function sendLike(value) {
     if (!user) return alert("Login to like/dislike drinks.");
 
@@ -55,16 +78,21 @@ export default function DrinkPage() {
         credentials: "include",
         body: JSON.stringify({ drinkId: id, value }),
       });
+
       if (!res.ok) throw new Error();
       alert("Thanks for your feedback!");
-    } catch {
+    } catch (e) {
+      console.error(e);
       alert("Like/dislike failed.");
     }
   }
 
-  // DRINK LOGGING
+  // --------------------------------------------------------------------
+  // Log drink
+  // --------------------------------------------------------------------
   async function logDrank() {
     if (!user) return alert("Login to track drinks.");
+
     try {
       const res = await fetch("/api/drinklog", {
         method: "POST",
@@ -72,46 +100,60 @@ export default function DrinkPage() {
         credentials: "include",
         body: JSON.stringify({ drinkId: id }),
       });
+
       const j = await res.json();
+
       if (!res.ok) throw new Error(j.error);
-      alert("Logged! This counts toward your stats.");
+      alert("Logged!");
     } catch (e) {
       console.error(e);
       alert("Could not log drink.");
     }
   }
 
-  // COMMENTS
+  // --------------------------------------------------------------------
+  // Post comment
+  // --------------------------------------------------------------------
   async function postComment(text) {
     if (!user) return alert("Login to comment.");
     if (!text.trim()) return;
 
-    const res = await fetch("/api/comments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ drinkId: id, text }),
-    });
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ drinkId: id, text }),
+      });
 
-    if (res.ok) {
-      loadComments(id);
+      if (res.ok) {
+        loadComments(id);
+      }
+    } catch (e) {
+      console.error(e);
     }
   }
 
-  // NARRATOR
+  // --------------------------------------------------------------------
+  // Narrator
+  // --------------------------------------------------------------------
   function buildNarratorScript(d) {
-    const ingredients = d.ingredients.join(", ");
-    const steps = d.steps.join(". ");
+    const ingredients = (d.ingredients || []).join(", ");
+    const steps = (d.steps || []).join(". ");
     return `${d.name}. ${d.description}. Ingredients: ${ingredients}. Steps: ${steps}.`;
   }
 
   function playNarrator() {
     if (!drink) return;
+
     const u = new SpeechSynthesisUtterance(buildNarratorScript(drink));
     u.rate = 0.95;
     window.speechSynthesis.speak(u);
   }
 
+  // --------------------------------------------------------------------
+  // UI rendering
+  // --------------------------------------------------------------------
   if (loading) return <div className="card">Loading...</div>;
   if (!drink) return <div className="card">Drink not found.</div>;
 

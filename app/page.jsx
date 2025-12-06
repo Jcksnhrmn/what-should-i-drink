@@ -1,7 +1,6 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-
 import { useEffect, useState } from "react";
 
 function buildNarratorScript(drink) {
@@ -33,7 +32,6 @@ export default function HomePage() {
       .then((r) => r.json())
       .then((j) => setUser(j.user || null))
       .catch(() => {});
-
     loadLeaderboard();
   }, []);
 
@@ -104,7 +102,7 @@ export default function HomePage() {
     setView("home");
   }
 
-  // DRINK GENERATION
+  // DRINK GENERATION — FIXED
   async function generateDrink() {
     setIsLoading(true);
     try {
@@ -115,7 +113,6 @@ export default function HomePage() {
       });
 
       const genJson = await genRes.json();
-
       if (!genRes.ok) throw new Error("Failed to generate drink");
       if (!genJson.name && !genJson.drink) throw new Error("Bad generator response");
 
@@ -138,14 +135,23 @@ export default function HomePage() {
       if (!saveRes.ok || !saveJson.drink) throw new Error("Failed to save drink");
 
       const dbDrink = saveJson.drink;
-      router.push(`/drink/${dbDrink.id}`);
 
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>
+      // MAIN FIX — update local UI
+      // >>>>>>>>>>>>>>>>>>>>>>>>>>
+      setDrink(dbDrink);
+      setView("drink");
+
+      // Still navigate for Vercel
+      router.push(`/drink/${dbDrink.id}`);
 
       await loadCommentsForDrink(dbDrink.id);
       await loadLeaderboard();
 
       if (narratorPlaying) playNarrator(dbDrink);
+
     } catch (e) {
+      console.error(e);
       alert("Could not generate a drink");
     } finally {
       setIsLoading(false);
@@ -200,29 +206,26 @@ export default function HomePage() {
 
   // COMMENTS
   async function postComment(text) {
-  if (!user) return alert("Login to comment.");
-  if (!drink) return;
+    if (!user) return alert("Login to comment.");
+    if (!drink) return;
 
-  try {
-    const res = await fetch("/api/comments", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ drinkId: drink.id, text }),
-    });
-    const j = await res.json();
-    if (!res.ok) {
-      alert(j.error || "Failed to post comment");
-    } else {
-      await loadCommentsForDrink(drink.id);
+    try {
+      const res = await fetch("/api/comments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ drinkId: drink.id, text }),
+      });
+      const j = await res.json();
+      if (!res.ok) {
+        alert(j.error || "Failed to post comment");
+      } else {
+        await loadCommentsForDrink(drink.id);
+      }
+    } catch {
+      alert("Error posting comment");
     }
-  } catch (e) {
-    console.error(e);
-    alert("Error posting comment");
   }
-}
-
-  
 
   // NARRATOR
   function playNarrator(d = drink) {
