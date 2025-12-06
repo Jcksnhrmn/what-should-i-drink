@@ -1,29 +1,43 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
 
-const commentsPath = path.join(process.cwd(), "app/data/comments.json");
-
+// POST - Add comment
 export async function POST(req) {
-  const { drinkName, username, comment } = await req.json();
+  try {
+    const { drinkId, text } = await req.json();
+    const token = (await cookies()).get("token")?.value;
 
-  let comments = JSON.parse(await fs.readFile(commentsPath, "utf8"));
+    if (!token) return Response.json({ error: "Not logged in" }, { status: 401 });
 
-  if (!comments[drinkName]) comments[drinkName] = [];
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.id;
 
-  comments[drinkName].push({
-    username,
-    comment,
-    timestamp: new Date().toISOString()
-  });
+    const comment = await prisma.comment.create({
+      data: { userId, drinkId, text },
+    });
 
-  await fs.writeFile(commentsPath, JSON.stringify(comments, null, 2));
-
-  return new Response(JSON.stringify({ success: true }));
+    return Response.json({ success: true, comment });
+  } catch (err) {
+    return Response.json({ error: "Failed to post comment" }, { status: 500 });
+  }
 }
 
+// GET - Get comments for a drink
 export async function GET(req) {
-  const drinkName = req.nextUrl.searchParams.get("drink");
-  let comments = JSON.parse(await fs.readFile(commentsPath, "utf8"));
+  try {
+    const drinkId = Number(req.nextUrl.searchParams.get("drinkId"));
 
-  return new Response(JSON.stringify(comments[drinkName] || []));
+    const comments = await prisma.comment.findMany({
+      where: { drinkId },
+      include: {
+        user: { select: { name: true, email: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return Response.json({ comments });
+  } catch (err) {
+    return Response.json({ error: "Failed to fetch comments" }, { status: 500 });
+  }
 }

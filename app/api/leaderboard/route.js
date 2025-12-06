@@ -1,24 +1,38 @@
-import { promises as fs } from "fs";
-import path from "path";
-
-const leaderboardPath = path.join(process.cwd(), "app/data/leaderboard.json");
-const usersPath = path.join(process.cwd(), "app/data/users.json");
+import { prisma } from "@/lib/prisma";
 
 export async function GET() {
-  const leaderboard = JSON.parse(await fs.readFile(leaderboardPath, "utf8"));
-  const users = JSON.parse(await fs.readFile(usersPath, "utf8"));
+  try {
+    const topUsers = await prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        drinkLogs: true,
+      },
+      orderBy: [
+        {
+          drinkLogs: {
+            _count: "desc"
+          }
+        }
+      ],
+      take: 10,
+    });
 
-  const drinkers = Object.entries(users)
-    .map(([username, data]) => ({
-      username,
-      drinksMade: data.drinksMade,
-      streak: data.streak
-    }))
-    .sort((a, b) => b.drinksMade - a.drinksMade);
+    const mostLiked = await prisma.drink.findMany({
+      include: {
+        _count: {
+          select: { likes: true }
+        }
+      },
+      orderBy: {
+        likes: { _count: "desc" }
+      },
+      take: 10,
+    });
 
-  return new Response(JSON.stringify({
-    likes: leaderboard.likes,
-    dislikes: leaderboard.dislikes,
-    topDrinkers: drinkers
-  }));
+    return Response.json({ topUsers, mostLiked });
+  } catch (err) {
+    return Response.json({ error: "Failed leaderboard" }, { status: 500 });
+  }
 }
