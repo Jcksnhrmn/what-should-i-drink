@@ -1,0 +1,136 @@
+diff --git a/prisma/schema.prisma b/prisma/schema.prisma
+index 1234567..abcdef0 100644
+--- a/prisma/schema.prisma
++++ b/prisma/schema.prisma
+@@ -13,7 +13,6 @@ model Drink {
+   id          String   @id @default(cuid())
+   name        String
+   description String?
+-  imageUrl    String?
+   ingredients Json
+   steps       Json
+
+diff --git a/app/api/generateDrink/route.js b/app/api/generateDrink/route.js
+index 1234567..abcdef0 100644
+--- a/app/api/generateDrink/route.js
++++ b/app/api/generateDrink/route.js
+@@ -1,6 +1,5 @@
+ import { NextResponse } from "next/server";
+ import OpenAI from "openai";
+-import { nanoid } from "nanoid";
+
+ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+@@ -10,44 +9,34 @@ export async function POST() {
+   try {
+-    const drinkCompletion = await openai.chat.completions.create({
++    const completion = await openai.chat.completions.create({
+       model: "gpt-4.1-mini",
+       messages: [
+         {
+           role: "user",
+           content: `Create a cocktail with:
+ 
+-- A creative name
+-- A short description
+-- A list of ingredients
+-- Step-by-step instructions
++- A unique name
++- A short flavor description
++- A list of ingredients
++- A list of steps
+ 
+ Return JSON ONLY:
+ {
+   "name": "",
+   "description": "",
+   "ingredients": [],
+   "steps": []
+ }`
+         }
+       ],
+       response_format: { type: "json_object" }
+     });
+ 
+-    const drink = JSON.parse(drinkCompletion.choices[0].message.content);
+-
+-    //
+-    // REMOVE IMAGE GENERATION COMPLETELY
+-    //
+-    // Previously generated DALL·E images — deleted
+-
+-    return NextResponse.json(
+-      {
+-        id: nanoid(),
+-        ...drink
+-      },
+-      { status: 200 }
+-    );
++    const drink = JSON.parse(completion.choices[0].message.content);
++    return NextResponse.json(drink, { status: 200 });
+
+   } catch (err) {
+     console.error("GENERATE DRINK ERROR:", err);
+diff --git a/app/api/drinks/route.js b/app/api/drinks/route.js
+index 1234567..abcdef0 100644
+--- a/app/api/drinks/route.js
++++ b/app/api/drinks/route.js
+@@ -3,7 +3,6 @@ export async function POST(req) {
+   try {
+     const body = await req.json();
+-    const { name, description, imageUrl, ingredients, steps } = body;
++    const { name, description, ingredients, steps } = body;
+
+     if (!name) {
+       return NextResponse.json({ error: "Missing drink name" }, { status: 400 });
+@@ -13,7 +12,6 @@ export async function POST(req) {
+     const drink = await prisma.drink.create({
+       data: {
+         name,
+         description,
+-        imageUrl,
+         ingredients,
+         steps
+       },
+diff --git a/app/page.jsx b/app/page.jsx
+index 1234567..abcdef0 100644
+--- a/app/page.jsx
++++ b/app/page.jsx
+@@ -210,17 +210,6 @@ {view === "drink" && drink && (
+         <h2>{drink.name}</h2>
+         <div className="meta">{drink.description}</div>
+
+-        {/* REMOVE IMAGE COMPLETELY */}
+-        <div style={{ marginTop: 12 }}>
+-          <img
+-            alt={drink.name}
+-            className="drink-image"
+-            style={{
+-              width: "100%",
+-              borderRadius: 8,
+-              marginBottom: 12,
+-              objectFit: "cover"
+-            }}
+-          />
+-        </div>
++        {/* No image to display */}
+
+       </div>
+
+diff --git a/styles/globals.css b/styles/globals.css
+index 1234567..abcdef0 100644
+--- a/styles/globals.css
++++ b/styles/globals.css
+@@ -50,12 +50,6 @@ body {
+   color: #333;
+ }
+
+-/* REMOVE IMAGE STYLING */
+-.drink-image {
+-  width: 100%;
+-  border-radius: 8px;
+-  object-fit: cover;
+-  margin-bottom: 12px;
+-}
++
+

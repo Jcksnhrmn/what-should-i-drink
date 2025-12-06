@@ -105,14 +105,6 @@ h3 { color: var(--gold-2); font-size:16px; margin-bottom:6px; }
 .right-col { flex:1; }
 
 /* Drink card specifics */
-.drink-image {
-  width:100%;
-  height:220px;
-  object-fit:cover;
-  border-radius:10px;
-  border: 1px solid rgba(255,255,255,0.02);
-  margin-bottom:12px;
-}
 
 /* tag pill */
 .pill {
@@ -138,9 +130,7 @@ h3 { color: var(--gold-2); font-size:16px; margin-bottom:6px; }
 @media (max-width: 880px) {
   .grid { flex-direction: column; }
   .sidebar { width:100%; }
-  .drink-image { height:180px; }
 }
-
 /* small helper */
 .row { display:flex; gap:8px; align-items:center; }
 .small { font-size:13px; color:var(--muted); }
