@@ -1,79 +1,126 @@
-# 🍹 What Should I Drink?
+# 🍸 What Should I Drink?
+A full-stack AI-powered cocktail generator where users can create custom drinks, view detailed recipe pages, leave comments, like drinks, and compete on a global leaderboard.
+(I made a script because i couldnt afford the openai subscription sorry but the website doesnt behave differently)
 
-A full-stack Next.js application that generates **AI-created cocktails**, lets users like/dislike drinks, comment on them, and browse the global leaderboard.  
-The app uses **Next.js 16 (App Router)**, **Prisma**, and a **PostgreSQL database**.
+Live Site: **https://what-should-i-drink-30lvoi0cb-jcksnhrmns-projects.vercel.app/**
 
-## ✨ Features
+---
 
-### 🔥 Drink Generator
-- Generates fully unique cocktails using the OpenAI API.
-- Each drink includes:
-  - Name  
-  - Description  
-  - Ingredient list  
-  - Step-by-step instructions  
-- Saved automatically to the database.
-- Opens on a dedicated drink page (`/drink/[id]`) for a clean viewing experience.
+## 🚀 Features
 
-### 👍 Likes / Dislikes
-- Users can like or dislike drinks.
-- Leaderboard automatically updates.
+### 🔮 **AI Drink Generator**
+- Generates a unique cocktail name, description, ingredients, and steps.
+- Each generated drink is stored in the database.
+- Automatically redirects to a dedicated drink detail page.
 
-### 💬 Comments
-- Logged-in users can leave comments on any drink.
+### 📄 **Drink Detail Pages**
+Each drink gets its own dynamic route:
 
-### 🏆 Leaderboard
-- Ranks drinks by total score (likes - dislikes).
-- Shows top users by engagement.
+Pages include:
+- Drink name & description  
+- Ingredients list  
+- Step-by-step instructions  
+- Likes  
+- Comments (with author names)  
 
-### 🔊 Narrator Mode
-- Uses browser speech synthesis to read the drink out loud.
+---
 
-### 🔐 Authentication
-- Email + password login/register.
-- Secure HTTP-only JWT cookies.
+### 🏆 **Leaderboard**
+Users appear on the leaderboard based on:
+- Total drinks generated
+- Total likes received on their drinks
 
-### 🧼 No Images
-- All image-related code has been removed for simplicity.
-- The app is now 100% text-based.
+---
 
-### ❌ Removed Features
-These were previously included but have been fully removed:
-- Drink logging / "I drank this" button  
-- User drink streaks  
-- Drink images  
+### 🔐 **User Authentication**
+Includes:
+- Register  
+- Login  
+- Logout  
+- Persistent sessions using HTTP-only cookies  
+- Password hashing with bcrypt  
 
-## 🛠 Tech Stack
+---
 
-- **Next.js 16 (App Router)**
-- **Prisma ORM**
-- **PostgreSQL**
-- **OpenAI API (gpt-4.1-mini)**
-- **NextAuth-style custom authentication**
-- **Vercel-ready deployment**
+### 🗃 **Tech Stack**
+**Frontend:**
+- Next.js 16 (App Router + Server Actions)
+- React
+- Turbopack
+- Custom CSS theme (gold-on-black luxury design)
 
-## 🚀 Getting Started
+**Backend:**
+- Prisma ORM
+- PostgreSQL (Vercel Postgres or local)
+
+**AI:**
+- OpenAI API (uses `sk-proj-*` model keys)
+
+**Deployment:**
+- Vercel (includes Prisma Client auto-generation)
+
+---
+
+## ⚙️ Environment Variables
+
+Create a `.env` file with:
+
+DATABASE_URL="your postgres url"
+OPENAI_API_KEY="sk-proj-..."
+JWT_SECRET="your-secret"
+
+
+For Vercel, set these in the Dashboard under **Project → Settings → Environment Variables**.
+
+---
+
+## 🧑‍💻 Running Locally
 
 Install dependencies:
 
-```sh
+```bash
 npm install
-npx prisma migrate dev
+npx prisma generate
 npm run dev
+Local site:
 http://localhost:3000
-DATABASE_URL="postgres://..."
-OPENAI_API_KEY="sk-proj-..."
-JWT_SECRET="your-secret"
+
+Deployment on Vercel
+
+This project includes a fix required by Prisma:
+
+package.json
+
+"build": "prisma generate && next build"
+
+
+To deploy:
+
+vercel --prod
+
+
+Vercel will:
+
+Install dependencies
+
+Generate Prisma Client
+
+Build and deploy the Next.js 
+
+Folder Structure
 app/
-  page.jsx               ← Main UI
-  drink/[id]/page.jsx    ← Dedicated drink page
-api/
-  generateDrink/route.js ← Drink generator
-  drinks/route.js        ← Create drink
-  drinks/[id]/route.js   ← Fetch drink
-  likes/route.js         ← Like/dislike
-  comments/route.js      ← Comments
-  auth/...
+  api/
+    auth/
+    drinks/
+    comments/
+    likes/
+  drink/
+    [id]/
+      page.js        # Drink detail page
+
 lib/
-  prisma.js
-  auth.js
+  prisma.js         # Prisma client
+  auth.js           # JWT helpers
+
+prisma/
+  schema.prisma     # Database models
