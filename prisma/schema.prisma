@@ -1,56 +1,60 @@
+// prisma/schema.prisma
+
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
 }
+
+
+
 
 generator client {
   provider = "prisma-client-js"
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  password  String
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
   name      String?
-  createdAt DateTime @default(now())
+  password  String
+  createdAt DateTime  @default(now())
 
-  likes      Like[]
-  comments   Comment[]
-  drinkLogs  DrinkLog[]
+  likes     Like[]
+  comments  Comment[]
+  drinkLogs DrinkLog[]
 }
 
 model Drink {
-  id          Int        @id @default(autoincrement())
+  id          Int       @id @default(autoincrement())
   name        String
-  description String
-  imageUrl    String
+  description String?
+  imageUrl    String?
   ingredients String[]
   steps       String[]
-  createdAt   DateTime   @default(now())
+  createdAt   DateTime  @default(now())
 
-  likes       Like[]
-  comments    Comment[]
-  drinkLogs   DrinkLog[]
+  likes     Like[]
+  comments  Comment[]
+  drinkLogs DrinkLog[]
 }
 
 model Like {
-  id        Int      @id @default(autoincrement())
-  value     Int      // +1 = like, -1 = dislike
-  userId    Int
-  drinkId   Int
-  createdAt DateTime @default(now())
+  id      Int   @id @default(autoincrement())
+  userId  Int
+  drinkId Int
+  value   Int   // 1 = like, -1 = dislike
 
-  user  User  @relation(fields: [userId], references: [id])
-  drink Drink @relation(fields: [drinkId], references: [id])
+  user    User  @relation(fields: [userId], references: [id])
+  drink   Drink @relation(fields: [drinkId], references: [id])
 
-  @@unique([userId, drinkId]) // user can only like/dislike once
+  @@unique([userId, drinkId])
 }
 
 model Comment {
   id        Int      @id @default(autoincrement())
-  text      String
   userId    Int
   drinkId   Int
+  text      String
   createdAt DateTime @default(now())
 
   user  User  @relation(fields: [userId], references: [id])
